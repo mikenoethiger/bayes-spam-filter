@@ -35,24 +35,21 @@ public class BayesSpamFilter {
 
     private Analysis db;
 
-    public Analysis learn() {
+    public void learn() {
 
         final String hamDir  = "ham-anlern";
         final String spamDir = "spam-anlern";
-        Map<String, WordCategorization> map = new HashMap<>();
+        final Map<String, WordCategorization> map = new HashMap<>();
 
-        File [] filesHam      = listDirectory(hamDir);
-        File [] filesSpam     = listDirectory(spamDir);
-        Set<String>       uniqueWords;
+        final File [] filesHam  = listDirectory(hamDir);
+        final File [] filesSpam = listDirectory(spamDir);
 
-        indexMap(map, filesHam, ( cat -> cat != null ? cat.incHam() : new WordCategorization(this.alpha).incHam()));
+        indexMap(map, filesHam,  ( cat -> cat != null ? cat.incHam()  : new WordCategorization(this.alpha).incHam()));
         indexMap(map, filesSpam, ( cat -> cat != null ? cat.incSpam() : new WordCategorization(this.alpha).incSpam()));
 
         db = new Analysis(map, hamDir.length(), spamDir.length());
 
-//        if (read())
 //        persist();
-        return db;
     }
 
     private void indexMap (
@@ -126,22 +123,22 @@ public class BayesSpamFilter {
 
     /**
      * Classify all mails in src/main/resources/ham-test and src/main/resources/ham-test
-     * using the {@link #classify(Set)} method and return threshold, alpha
+     * using the {@link #classify(String)} method and return threshold, alpha
      * as well as success rate in a {@link Result}.
      *
      * @return
      */
     public Result runTest() {
-        File[] spamEmails = listDirectory("spam-test");
-        File[] hamEmails = listDirectory("ham-test");
-        int totalMails = spamEmails.length + hamEmails.length;
+        List<String> spamEmails = new ArrayList<>();
+        List<String> hamEmails = new ArrayList<>();
+        int totalMails = spamEmails.size() + hamEmails.size();
         int correctClassification = 0;
-        for (File email : spamEmails) {
-            boolean isSpam = classify(getWordsForFile(email));
+        for (String email : spamEmails) {
+            boolean isSpam = classify(email);
             if (isSpam) correctClassification++;
         }
-        for (File email: hamEmails) {
-            boolean isSpam = classify(getWordsForFile(email));
+        for (String email: hamEmails) {
+            boolean isSpam = classify(email);
             if (!isSpam) correctClassification++;
         }
         double successRate = (double) correctClassification / (double) totalMails;
@@ -151,11 +148,16 @@ public class BayesSpamFilter {
 
     /**
      * Classifies the email as Spam or no Spam
-     * @param emailWords
+     * @param email
      * @return
      */
-    public boolean classify(Set<String> emailWords) {
-        double spamProbability = calcProbability(emailWords);
+    public boolean classify(String email) {
+        String[] words = email.split(" ");
+        Set<String> wordsElementary = new HashSet<String>();
+        for(String w : words){
+            wordsElementary.add(w);
+        }
+        double spamProbability = calcProbability(wordsElementary);
         return spamProbability >= spamThreshold;
     }
 
@@ -174,8 +176,10 @@ public class BayesSpamFilter {
         double divisor = 0;                 // Pr(W|S) * Pr(S) + Pr(W|H) * Pr(H)
 
         for(String w : words){
-            dividend *= (db.getCategorization().get(w).getSpam() / db.getNumberOfAnalyzedSpamMails());
-            divisor2 *= (db.getCategorization().get(w).getHam() / db.getNumberOfAnalyzedHamMails());
+            WordCategorization cat = db.getCategorization().get(w);
+
+            dividend *= (cat != null ? cat.getSpam() : alpha / db.getNumberOfAnalyzedSpamMails());
+            divisor2 *= (cat != null ? cat.getHam()  : alpha / db.getNumberOfAnalyzedHamMails());
         }
         divisor1 = dividend;
 
