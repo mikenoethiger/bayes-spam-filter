@@ -22,8 +22,18 @@ public class WordCategorization {
         return this;
     }
 
+    public WordCategorization addToSpam(double value) {
+        spam += value;
+        return this;
+    }
+
     public WordCategorization incHam() {
         ham++;
+        return this;
+    }
+
+    public WordCategorization addToHam(double value) {
+        ham += value;
         return this;
     }
 }

@@ -26,11 +26,8 @@ public class BayesSpamFilter {
      * E.g. if the probability of an email being spam was calculated to be 0.6 and threshold is set
      * to 0.7, the email is considered spam.
      */
-    private final double spamThreshold = 0.5;
+    private double spamThreshold = 0.5;
 
-    /**
-     * // TODO define meaningful alpha
-     */
     private double alpha = 0.5;
 
     private Analysis db;
@@ -50,6 +47,14 @@ public class BayesSpamFilter {
         db = new Analysis(map, hamDir.length(), spamDir.length());
 
 //        persist();
+    }
+
+    public void learnStatic() {
+        final Map<String, WordCategorization> map = new HashMap<>();
+
+        map.put("online", new WordCategorization(alpha).addToHam(3).addToSpam(8));
+        map.put("haben", new WordCategorization(alpha).addToHam(30).addToSpam(7));
+        db = new Analysis(map, 100, 100);
     }
 
     private void indexMap (
@@ -117,28 +122,32 @@ public class BayesSpamFilter {
         // TODO @Marc
     }
 
-    public void calibrate() {
+    public void calibrate(double alpha, double sProbability, double spamThreshold) {
         // TODO @Mike calibrates the sProbability and hProbability to be as precise as possible
+        this.alpha = alpha;
+        this.sProbability = sProbability;
+        this.hProbability = 1-sProbability;
+        this.spamThreshold = spamThreshold;
     }
 
     /**
      * Classify all mails in src/main/resources/ham-test and src/main/resources/ham-test
-     * using the {@link #classify(String)} method and return threshold, alpha
+     * using the {@link #classify(Set)} method and return threshold, alpha
      * as well as success rate in a {@link Result}.
      *
      * @return
      */
     public Result runTest() {
-        List<String> spamEmails = new ArrayList<>();
-        List<String> hamEmails = new ArrayList<>();
-        int totalMails = spamEmails.size() + hamEmails.size();
+        File[] spamEmails = listDirectory("spam-test");
+        File[] hamEmails = listDirectory("ham-test");
+        int totalMails = spamEmails.length + hamEmails.length;
         int correctClassification = 0;
-        for (String email : spamEmails) {
-            boolean isSpam = classify(email);
+        for (File email : spamEmails) {
+            boolean isSpam = classify(uniqueWordsFromEMail(email));
             if (isSpam) correctClassification++;
         }
-        for (String email: hamEmails) {
-            boolean isSpam = classify(email);
+        for (File email: hamEmails) {
+            boolean isSpam = classify(uniqueWordsFromEMail(email));
             if (!isSpam) correctClassification++;
         }
         double successRate = (double) correctClassification / (double) totalMails;
@@ -148,16 +157,11 @@ public class BayesSpamFilter {
 
     /**
      * Classifies the email as Spam or no Spam
-     * @param email
+     * @param emailWords
      * @return
      */
-    public boolean classify(String email) {
-        String[] words = email.split(" ");
-        Set<String> wordsElementary = new HashSet<String>();
-        for(String w : words){
-            wordsElementary.add(w);
-        }
-        double spamProbability = calcProbability(wordsElementary);
+    public boolean classify(Set<String> emailWords) {
+        double spamProbability = calcProbability(emailWords);
         return spamProbability >= spamThreshold;
     }
 
@@ -167,7 +171,7 @@ public class BayesSpamFilter {
      * @param words
      * @return
      */
-    private double calcProbability(Set<String> words){
+    public double calcProbability(Set<String> words){
                                             // Mathematical definitions according to wikipedia
                                             // Multiplied for each word as shown in math.kit.edu
         double dividend = sProbability;     // Pr(W|S) * Pr(S)
