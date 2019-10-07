@@ -47,6 +47,7 @@ public class BayesSpamFilter {
     }
 
     private Stream<String> readFromClasspath(String realativePath) {
+        return null;
     }
 
 }
