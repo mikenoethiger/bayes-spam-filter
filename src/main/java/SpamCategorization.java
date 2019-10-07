@@ -1,19 +1,19 @@
 public class SpamCategorization {
 
-    private int spam;
-    private int ham;
+    private double spam;
+    private double ham;
 
-    public SpamCategorization() {
+    public SpamCategorization(double alpha) {
         // TODD specify meaningful default values (maybe change to double)
-        this.spam = 1;
-        this.ham = 1;
+        this.spam = alpha;
+        this.ham = alpha;
     }
 
-    public int getSpam() {
+    public double getSpam() {
         return spam;
     }
 
-    public int getHam() {
+    public double getHam() {
         return ham;
     }
 

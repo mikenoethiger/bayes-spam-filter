@@ -19,6 +19,11 @@ public class BayesSpamFilter {
      */
     private final double spamThreshold = 0.5;
 
+    /**
+     * // TODO define meaningful alpha
+     */
+    private double alpha = 0.5;
+
     private Map<String, SpamCategorization> db;
 
     public Map<String, SpamCategorization> learn() {
