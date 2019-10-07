@@ -39,7 +39,7 @@ public class BayesSpamFilter {
         final String hamDir  = "ham-anlern";
         final String spamDir = "spam-anlern";
         Map<String, WordCategorization> map = new HashMap<>();
-
+        map.keySet()
         File [] files     = listDirectory(hamDir);
 
         Set<String>       uniqueWords;
@@ -79,6 +79,17 @@ public class BayesSpamFilter {
         return null;
     }
 
+    private Set<String> getWordsForFile(File file) {
+        // TODO @Marc implement
+        return null;
+    }
+
+    /**
+     * List files in directory (relative to src/main/resources)
+     *
+     * @param dir
+     * @return
+     */
     private File[] listDirectory(String dir) {
         return  new File(getClass().getClassLoader().getResource(dir).getFile()).listFiles();
     }
@@ -106,9 +117,9 @@ public class BayesSpamFilter {
     }
 
     /**
-     * Classify all mails in src/test/resources/ham-test and src/test/resources/ham-test
+     * Classify all mails in src/main/resources/ham-test and src/main/resources/ham-test
      * using the {@link #classify(String)} method and return threshold, alpha
-     * as well as success rate in a {@link Result}
+     * as well as success rate in a {@link Result}.
      *
      * @return
      */
