@@ -1,9 +1,9 @@
-public class SpamCategorization {
+public class WordCategorization {
 
     private double spam;
     private double ham;
 
-    public SpamCategorization(double alpha) {
+    public WordCategorization(double alpha) {
         // TODD specify meaningful default values (maybe change to double)
         this.spam = alpha;
         this.ham = alpha;
@@ -17,12 +17,12 @@ public class SpamCategorization {
         return ham;
     }
 
-    public SpamCategorization incSpam() {
+    public WordCategorization incSpam() {
         spam++;
         return this;
     }
 
-    public SpamCategorization incHam() {
+    public WordCategorization incHam() {
         ham++;
         return this;
     }

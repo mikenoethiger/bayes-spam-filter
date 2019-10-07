@@ -24,9 +24,9 @@ public class BayesSpamFilter {
      */
     private double alpha = 0.5;
 
-    private Map<String, SpamCategorization> db;
+    private Analysis db;
 
-    public Map<String, SpamCategorization> learn() {
+    public Analysis learn() {
         // TODO @Marc
         // stupid split by space
 //        if (read())
@@ -34,11 +34,11 @@ public class BayesSpamFilter {
         return null;
     }
 
-    private void persistAnalysationData(Map<String, SpamCategorization> db) {
+    private void persistAnalysationData(Map<String, WordCategorization> db) {
         // TODO @Marc
     }
 
-    private void importAnalysationData(Map<String, SpamCategorization> db) {
+    private void importAnalysationData(Map<String, WordCategorization> db) {
         // TODO @Marc
     }
 
