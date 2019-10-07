@@ -22,9 +22,13 @@ public class Result {
         return successRate;
     }
 
+
     @Override
     public String toString() {
-        // TODO @Steve
-        return super.toString();
+        String result = "";
+        result += "Schwellenwert: " + threshold + System.lineSeparator();
+        result += "Alpha: " + alpha + System.lineSeparator();
+        result += "Erkennungsrate: " + successRate + System.lineSeparator();
+        return result;
     }
 }

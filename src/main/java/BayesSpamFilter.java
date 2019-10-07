@@ -1,4 +1,6 @@
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class BayesSpamFilter {
@@ -46,9 +48,40 @@ public class BayesSpamFilter {
         // TODO @Mike calibrates the sProbability and hProbability to be as precise as possible
     }
 
-    public Result classify(String email) {
-        // TODO @Steve
-        return null;
+    /**
+     * Classifies the email as Spam or no Spam
+     * @param email
+     * @return
+     */
+    public boolean classify(String email) {
+        String[] words = email.split(" ");
+        Set<String> wordsElementary = new HashSet<String>();
+        for(String w : words){
+            wordsElementary.add(w);
+        }
+        double spamProbability = calcProbability(wordsElementary);
+        return spamProbability >= spamThreshold;
+    }
+
+    /**
+     * Calculates the probability of being a spam according to http://www.math.kit.edu/ianm4/~ritterbusch/seite/spam/de
+     * @param words
+     * @return
+     */
+    private double calcProbability(Set<String> words){
+        double dividend = sProbability; //
+        double divisor1 = 0;
+        double divisor2 = hProbability;
+        double divisor = 0;
+
+        for(String w : words){
+            dividend *= (db.getCategorization().get(w).getSpam() / db.getNumberOfAnalyzedSpamMails());
+            divisor2 *= (db.getCategorization().get(w).getHam() / db.getNumberOfAnalyzedHamMails());
+        }
+        divisor1 = dividend;
+
+        divisor = divisor1 + divisor2;
+        return dividend / divisor;
     }
 
     private Stream<String> readFromClasspath(String realativePath) {
