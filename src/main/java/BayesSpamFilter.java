@@ -1,6 +1,4 @@
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class BayesSpamFilter {
@@ -46,6 +44,31 @@ public class BayesSpamFilter {
 
     public void calibrate() {
         // TODO @Mike calibrates the sProbability and hProbability to be as precise as possible
+    }
+
+    /**
+     * Classify all mails in src/test/resources/ham-test and src/test/resources/ham-test
+     * using the {@link #classify(String)} method and return threshold, alpha
+     * as well as success rate in a {@link Result}
+     *
+     * @return
+     */
+    public Result runTest() {
+        List<String> spamEmails = new ArrayList<>();
+        List<String> hamEmails = new ArrayList<>();
+        int totalMails = spamEmails.size() + hamEmails.size();
+        int correctClassification = 0;
+        for (String email : spamEmails) {
+            boolean isSpam = classify(email);
+            if (isSpam) correctClassification++;
+        }
+        for (String email: hamEmails) {
+            boolean isSpam = classify(email);
+            if (!isSpam) correctClassification++;
+        }
+        double successRate = (double) correctClassification / (double) totalMails;
+
+        return new Result(spamThreshold, alpha, successRate);
     }
 
     /**
