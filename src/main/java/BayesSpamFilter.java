@@ -132,22 +132,22 @@ public class BayesSpamFilter {
 
     /**
      * Classify all mails in src/main/resources/ham-test and src/main/resources/ham-test
-     * using the {@link #classify(String)} method and return threshold, alpha
+     * using the {@link #classify(Set)} method and return threshold, alpha
      * as well as success rate in a {@link Result}.
      *
      * @return
      */
     public Result runTest() {
-        List<String> spamEmails = new ArrayList<>();
-        List<String> hamEmails = new ArrayList<>();
-        int totalMails = spamEmails.size() + hamEmails.size();
+        File[] spamEmails = listDirectory("spam-test");
+        File[] hamEmails = listDirectory("ham-test");
+        int totalMails = spamEmails.length + hamEmails.length;
         int correctClassification = 0;
-        for (String email : spamEmails) {
-            boolean isSpam = classify(email);
+        for (File email : spamEmails) {
+            boolean isSpam = classify(getWordsForFile(email));
             if (isSpam) correctClassification++;
         }
-        for (String email: hamEmails) {
-            boolean isSpam = classify(email);
+        for (File email: hamEmails) {
+            boolean isSpam = classify(getWordsForFile(email));
             if (!isSpam) correctClassification++;
         }
         double successRate = (double) correctClassification / (double) totalMails;
@@ -157,16 +157,11 @@ public class BayesSpamFilter {
 
     /**
      * Classifies the email as Spam or no Spam
-     * @param email
+     * @param emailWords
      * @return
      */
-    public boolean classify(String email) {
-        String[] words = email.split(" ");
-        Set<String> wordsElementary = new HashSet<String>();
-        for(String w : words){
-            wordsElementary.add(w);
-        }
-        double spamProbability = calcProbability(wordsElementary);
+    public boolean classify(Set<String> emailWords) {
+        double spamProbability = calcProbability(emailWords);
         return spamProbability >= spamThreshold;
     }
 
