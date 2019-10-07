@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class BayesSpamFilter {
@@ -41,37 +42,35 @@ public class BayesSpamFilter {
         Map<String, WordCategorization> map = new HashMap<>();
 
         File [] filesHam      = listDirectory(hamDir);
-        File [] filesSpam     = listDirectory(hamDir);
-
+        File [] filesSpam     = listDirectory(spamDir);
         Set<String>       uniqueWords;
-        InputStreamReader reader;
 
-        for (File email : filesHam) {
-            uniqueWords = new HashSet<>();
+        indexMap(map, filesHam, ( cat -> cat != null ? cat.incHam() : new WordCategorization(this.alpha).incHam()));
+        indexMap(map, filesSpam, ( cat -> cat != null ? cat.incSpam() : new WordCategorization(this.alpha).incSpam()));
 
-
-            // todo read unique words form file
-
-            uniqueWords = uniqueWordsFromEMail(email);
-            // Read the files unique words
-
-
-            // Store the data into the db
-            for (String word : uniqueWords) {
-                WordCategorization cat = map.get(word);
-                map.put( word,  cat != null ? cat.incHam() : new WordCategorization(this.alpha).incHam());
-            }
-        }
-
-
-        //db = new Analysis(map)
+        db = new Analysis(map, hamDir.length(), spamDir.length());
 
 //        if (read())
 //        persist();
         return db;
     }
 
-    //private Map<String, WordCategorization> creat
+    private void indexMap (
+            Map<String, WordCategorization> map,
+            File[] files,
+            Function<WordCategorization, WordCategorization> addFuncion) {
+
+        Set<String> uniqueWords;
+
+        for (File email : files) {
+            uniqueWords = uniqueWordsFromEMail(email);
+
+            for (String word : uniqueWords) {
+                WordCategorization cat = map.get(word);
+                map.put( word,  addFuncion.apply(cat));
+            }
+        }
+    }
 
     private Set<String> uniqueWordsFromEMail(File email) {
         Set<String> uniqueWords = new HashSet<>();
@@ -91,11 +90,6 @@ public class BayesSpamFilter {
             e.printStackTrace();
         }
         return uniqueWords;
-    }
-
-    private Set<String> getWordsForFile(File file) {
-        // TODO @Marc implement
-        return null;
     }
 
     /**
