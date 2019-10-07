@@ -1,3 +1,7 @@
+import java.io.*;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -29,11 +33,62 @@ public class BayesSpamFilter {
     private Analysis db;
 
     public Analysis learn() {
-        // TODO @Marc
-        // stupid split by space
+
+        final String hamDir  = "ham-anlern";
+        final String spamDir = "spam-anlern";
+        Map<String, WordCategorization> map = new HashMap<>();
+
+        File [] files     = listDirectory(hamDir);
+
+        Set<String>       uniqueWords;
+        InputStreamReader reader;
+
+        for (File file : files) {
+            uniqueWords = new HashSet<>();
+
+            // Read the files unique words
+            try(BufferedReader bufferedReader = getBufferedReader(file)) {
+
+                String line;
+                while(( line = bufferedReader.readLine()) != null) {
+
+                    String[] toIndex = line.split(" ");
+                    for (String word : toIndex) {
+                        uniqueWords.add(word);
+                    }
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
+            // Store the data into the db
+            for (String word : uniqueWords) {
+                WordCategorization cat = map.get(word);
+
+
+                map.put( word,  cat != null ? cat.incHam() : new WordCategorization(this.alpha).incHam());
+            }
+        }
+
 //        if (read())
 //        persist();
         return null;
+    }
+
+    private File[] listDirectory(String dir) {
+        return  new File(getClass().getClassLoader().getResource(dir).getFile()).listFiles();
+    }
+
+    private BufferedReader getBufferedReader(String file) throws IOException {
+        URL url = getClass().getClassLoader().getResource(file);
+        return getBufferedReader((url).getFile());
+    }
+
+    private BufferedReader getBufferedReader(File file) throws IOException {
+        InputStreamReader reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
+        return new BufferedReader(reader);
     }
 
     private void persistAnalysationData(Map<String, WordCategorization> db) {
