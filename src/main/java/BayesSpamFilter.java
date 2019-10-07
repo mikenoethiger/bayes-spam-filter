@@ -40,43 +40,57 @@ public class BayesSpamFilter {
         final String spamDir = "spam-anlern";
         Map<String, WordCategorization> map = new HashMap<>();
 
-        File [] files     = listDirectory(hamDir);
+        File [] filesHam      = listDirectory(hamDir);
+        File [] filesSpam     = listDirectory(hamDir);
 
         Set<String>       uniqueWords;
         InputStreamReader reader;
 
-        for (File file : files) {
+        for (File email : filesHam) {
             uniqueWords = new HashSet<>();
 
+
+            // todo read unique words form file
+
+            uniqueWords = uniqueWordsFromEMail(email);
             // Read the files unique words
-            try(BufferedReader bufferedReader = getBufferedReader(file)) {
-
-                String line;
-                while(( line = bufferedReader.readLine()) != null) {
-
-                    String[] toIndex = line.split(" ");
-                    for (String word : toIndex) {
-                        uniqueWords.add(word);
-                    }
-                }
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
 
 
             // Store the data into the db
             for (String word : uniqueWords) {
                 WordCategorization cat = map.get(word);
-
-
                 map.put( word,  cat != null ? cat.incHam() : new WordCategorization(this.alpha).incHam());
             }
         }
 
+
+        //db = new Analysis(map)
+
 //        if (read())
 //        persist();
-        return null;
+        return db;
+    }
+
+    //private Map<String, WordCategorization> creat
+
+    private Set<String> uniqueWordsFromEMail(File email) {
+        Set<String> uniqueWords = new HashSet<>();
+
+        try(BufferedReader bufferedReader = getBufferedReader(email)) {
+
+            String line;
+            while(( line = bufferedReader.readLine()) != null) {
+
+                String[] toIndex = line.split(" ");
+                for (String word : toIndex) {
+                    uniqueWords.add(word);
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return uniqueWords;
     }
 
     private Set<String> getWordsForFile(File file) {
