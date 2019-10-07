@@ -39,7 +39,7 @@ public class BayesSpamFilter {
         final String hamDir  = "ham-anlern";
         final String spamDir = "spam-anlern";
         Map<String, WordCategorization> map = new HashMap<>();
-        map.keySet()
+
         File [] files     = listDirectory(hamDir);
 
         Set<String>       uniqueWords;
