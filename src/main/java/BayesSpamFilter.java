@@ -147,14 +147,17 @@ public class BayesSpamFilter {
 
     /**
      * Calculates the probability of being a spam according to http://www.math.kit.edu/ianm4/~ritterbusch/seite/spam/de
+     * and http://www.math.kit.edu/ianm4/~ritterbusch/seite/spam/de
      * @param words
      * @return
      */
     private double calcProbability(Set<String> words){
-        double dividend = sProbability; //
-        double divisor1 = 0;
-        double divisor2 = hProbability;
-        double divisor = 0;
+                                            // Mathematical definitions according to wikipedia
+                                            // Multiplied for each word as shown in math.kit.edu
+        double dividend = sProbability;     // Pr(W|S) * Pr(S)
+        double divisor1 = 0;                // Pr(W|S) * Pr(S)
+        double divisor2 = hProbability;     // Pr(W|H) * Pr(H)
+        double divisor = 0;                 // Pr(W|S) * Pr(S) + Pr(W|H) * Pr(H)
 
         for(String w : words){
             dividend *= (db.getCategorization().get(w).getSpam() / db.getNumberOfAnalyzedSpamMails());
@@ -163,7 +166,7 @@ public class BayesSpamFilter {
         divisor1 = dividend;
 
         divisor = divisor1 + divisor2;
-        return dividend / divisor;
+        return dividend / divisor;          //Pr(S | W)
     }
 
     private Stream<String> readFromClasspath(String realativePath) {
