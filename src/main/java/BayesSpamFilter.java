@@ -32,6 +32,9 @@ public class BayesSpamFilter {
 
     private Analysis db;
 
+    /**
+     * Reads the learning directories and updates the {@link Analysis} db.
+     */
     public void learn() {
 
         final String hamDir  = "ham-anlern";
@@ -45,8 +48,6 @@ public class BayesSpamFilter {
         indexMap(map, filesSpam, ( cat -> cat != null ? cat.incSpam() : new WordCategorization(this.alpha).incSpam()));
 
         db = new Analysis(map, hamDir.length(), spamDir.length());
-
-//        persist();
     }
 
     public void learnStatic() {
@@ -57,6 +58,13 @@ public class BayesSpamFilter {
         db = new Analysis(map, 100, 100);
     }
 
+    /**
+     * Indexes the given map with the given files.
+     *
+     * @param map         Map with all the indexed data
+     * @param files       All <code>files</code> to index.
+     * @param addFuncion  Function which determines which value is put into the map.
+     */
     private void indexMap (
             Map<String, WordCategorization> map,
             File[] files,
@@ -74,6 +82,12 @@ public class BayesSpamFilter {
         }
     }
 
+    /**
+     * Reads the <code>emails</code> (files) content and returns all unique words contained in {@link Set<String>}
+     *
+     * @param email File to analyse
+     * @return {@link Set<String>} with all unique words
+     */
     private Set<String> uniqueWordsFromEMail(File email) {
         Set<String> uniqueWords = new HashSet<>();
 
@@ -83,9 +97,7 @@ public class BayesSpamFilter {
             while(( line = bufferedReader.readLine()) != null) {
 
                 String[] toIndex = line.split(" ");
-                for (String word : toIndex) {
-                    uniqueWords.add(word);
-                }
+                uniqueWords.addAll(Arrays.asList(toIndex));
             }
 
         } catch (IOException e) {
@@ -95,20 +107,34 @@ public class BayesSpamFilter {
     }
 
     /**
-     * List files in directory (relative to src/main/resources)
+     * List files in directory.
      *
-     * @param dir
-     * @return
+     * @param dir Directory (relative to src/main/resources)
+     * @return <code>File[]</code>: Files contained in <code>dir</code>
      */
     private File[] listDirectory(String dir) {
         return  new File(getClass().getClassLoader().getResource(dir).getFile()).listFiles();
     }
 
+    /**
+     * Creates a {@link BufferedReader} form the given <code>file</code>.
+     *
+     * @param file File located in directory (relative to src/main/resources)
+     * @return {@link BufferedReader} to <code>file</code>
+     * @throws IOException
+     */
     private BufferedReader getBufferedReader(String file) throws IOException {
         URL url = getClass().getClassLoader().getResource(file);
         return getBufferedReader((url).getFile());
     }
 
+    /**
+     * Creates a {@link BufferedReader} form the given <code>file</code>.
+     *
+     * @param file File located in directory (relative to src/main/resources)
+     * @return {@link BufferedReader} to <code>file</code>
+     * @throws IOException
+     */
     private BufferedReader getBufferedReader(File file) throws IOException {
         InputStreamReader reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
         return new BufferedReader(reader);
