@@ -179,7 +179,7 @@ public class BayesSpamFilter {
             WordCategorization cat = db.getCategorization().get(w);
 
             dividend *= (cat != null ? cat.getSpam() : alpha / db.getNumberOfAnalyzedSpamMails());
-            divisor2 *= (cat != null ? cat.getHam()  : alpha  / db.getNumberOfAnalyzedHamMails());
+            divisor2 *= (cat != null ? cat.getHam()  : alpha / db.getNumberOfAnalyzedHamMails());
         }
         divisor1 = dividend;
 
