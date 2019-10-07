@@ -4,8 +4,7 @@ import java.util.Set;
 
 public class Main {
 
-    // TODO marc remove IOException
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         BayesSpamFilter bayesSpamFilter = new BayesSpamFilter();
 
         // Static Run
