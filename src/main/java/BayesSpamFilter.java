@@ -21,7 +21,6 @@ public class BayesSpamFilter {
      */
     private double hProbability = 1-sProbability;
     /**
-     * // TODO define meaningful threshold
      * Threshold between 0 and 1 which defines at which point an email is considered spam.
      * E.g. if the probability of an email being spam was calculated to be 0.6 and threshold is set
      * to 0.7, the email is considered spam.
@@ -29,7 +28,9 @@ public class BayesSpamFilter {
     private double spamThreshold = 0.5;
 
     private double alpha = 0.5;
-
+    /**
+     * Storing analysed data
+     */
     private Analysis db;
 
     /**
@@ -44,8 +45,8 @@ public class BayesSpamFilter {
         final File [] filesHam  = listDirectory(hamDir);
         final File [] filesSpam = listDirectory(spamDir);
 
-        indexMap(map, filesHam,  ( cat -> cat != null ? cat.incHam()  : new WordCategorization(this.alpha).incHam()));
-        indexMap(map, filesSpam, ( cat -> cat != null ? cat.incSpam() : new WordCategorization(this.alpha).incSpam()));
+        indexMap(map, filesHam,  ( cat -> cat != null ? cat.incHam()  : new WordCategorization().incHam()));
+        indexMap(map, filesSpam, ( cat -> cat != null ? cat.incSpam() : new WordCategorization().incSpam()));
 
         db = new Analysis(map, hamDir.length(), spamDir.length());
     }
@@ -53,8 +54,8 @@ public class BayesSpamFilter {
     public void learnStatic() {
         final Map<String, WordCategorization> map = new HashMap<>();
 
-        map.put("online", new WordCategorization(alpha).addToHam(3).addToSpam(8));
-        map.put("haben", new WordCategorization(alpha).addToHam(30).addToSpam(7));
+        map.put("online", new WordCategorization().addToHam(3).addToSpam(8));
+        map.put("haben", new WordCategorization().addToHam(30).addToSpam(7));
         db = new Analysis(map, 100, 100);
     }
 
@@ -207,9 +208,11 @@ public class BayesSpamFilter {
 
         for(String w : words){
             WordCategorization cat = db.getCategorization().get(w);
+            double spam = cat != null ? cat.getSpam() : alpha;
+            double ham  = cat != null ? cat.getHam()  : alpha;
 
-            dividend *= (cat != null ? cat.getSpam() : alpha / db.getNumberOfAnalyzedSpamMails());
-            divisor2 *= (cat != null ? cat.getHam()  : alpha / db.getNumberOfAnalyzedHamMails());
+            dividend *= ( spam == 0 ? alpha : spam / db.getNumberOfAnalyzedSpamMails());
+            divisor2 *= ( ham  == 0 ? alpha : ham  / db.getNumberOfAnalyzedHamMails());
         }
         divisor1 = dividend;
 

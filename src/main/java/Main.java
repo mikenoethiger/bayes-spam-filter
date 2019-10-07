@@ -10,7 +10,7 @@ public class Main {
 
         // Static Run
         bayesSpamFilter.learnStatic();
-        bayesSpamFilter.calibrate(0.5, 0.9, 0.5);
+        bayesSpamFilter.calibrate(0.0001, 0.8, 0.95);
         Set<String> words = new HashSet<>();
         words.add("online");
         words.add("haben");

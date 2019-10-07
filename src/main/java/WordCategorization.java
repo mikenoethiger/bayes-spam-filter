@@ -3,10 +3,10 @@ public class WordCategorization {
     private double spam;
     private double ham;
 
-    public WordCategorization(double alpha) {
+    public WordCategorization() {
         // TODD specify meaningful default values (maybe change to double)
-        this.spam = alpha;
-        this.ham = alpha;
+        this.spam = 0;
+        this.ham = 0;
     }
 
     public double getSpam() {
