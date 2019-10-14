@@ -8,7 +8,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 public class BayesSpamFilter {
 
@@ -19,7 +18,7 @@ public class BayesSpamFilter {
     /**
      * Assumption for base probability of an email being ham
      */
-    private double hProbability = 1-sProbability;
+    private double hProbability = 1 - sProbability;
     /**
      * Threshold between 0 and 1 which defines at which point an email is considered spam.
      * E.g. if the probability of an email being spam was calculated to be 0.6 and threshold is set
@@ -28,45 +27,133 @@ public class BayesSpamFilter {
     private double spamThreshold = 0.5;
 
     private double alpha = 0.5;
+
     /**
      * Storing analysed data
      */
     private Analysis db;
+
+    private File[] spamEmails = null;
+    private File[] hamEmails = null;
+
+    /**
+     * Set other threshold values.
+     *
+     * @param alpha
+     * @param sProbability
+     * @param spamThreshold
+     */
+    public void calibrate(double alpha, double sProbability, double spamThreshold) {
+        this.alpha = alpha;
+        this.sProbability = sProbability;
+        this.hProbability = 1 - sProbability;
+        this.spamThreshold = spamThreshold;
+    }
+
+    /**
+     * Automatic Calibrates with the best alpha, sProbability and spamThreshold.
+     * Calculated by trying values on the ham-/spam-kallibrierung.
+     * This method is not time optimised and should only be use for retrieving the parameter.
+     * This method needs around 15min to get results.
+     */
+    public void autoCalibrate() {
+        double bestAlpha = 0;
+        double bestsProbability = 0;
+        double bestSpamThreshold = 0;
+        double bestResult = 0;
+        learn();
+        for (double a = 0.0001; a < 0.01; a += 0.005) {
+            calibrate(a, 0, 0);
+//          do foreach to change alpha on all instead of learn new
+            final double aF = a;
+            db.getCategorization().values().stream()
+                    .filter(wordCategorization -> wordCategorization.getHam() < 1)
+                    .forEach(wordCategorization -> wordCategorization.addToHam((-1 * wordCategorization.getHam()) + aF));
+            db.getCategorization().values().stream()
+                    .filter(wordCategorization -> wordCategorization.getSpam() < 1)
+                    .forEach(wordCategorization -> wordCategorization.addToSpam((-1 * wordCategorization.getSpam()) + aF));
+
+            for (double sProb = 0.01; sProb < 1; sProb += 0.01) {
+                for (double sThre = 0.01; sThre < 1; sThre += 0.05) {
+                    calibrate(a, sProb, sThre);
+                    //run on kallibrierung
+                    Result res = runTest("kallibrierung");
+                    if (res.getSuccessRate() > bestResult) {
+                        bestAlpha = a;
+                        bestsProbability = sProb;
+                        bestSpamThreshold = sThre;
+                        bestResult = res.getSuccessRate();
+                    }
+                }
+            }
+        }
+        System.out.println("Best Calibration: ");
+        System.out.println("Alpha: " + bestAlpha);
+        System.out.println("sProbability: " + bestsProbability);
+        System.out.println("Spam Threshold: " + bestSpamThreshold);
+        System.out.println("Best Result: " + bestResult);
+        calibrate(bestAlpha, bestsProbability, bestSpamThreshold);
+    }
+
+    /**
+     * Classify all mails in src/main/resources/ham-test and src/main/resources/spam-test
+     * using the {@link #classify(Set)} method and return threshold, alpha
+     * as well as success rate in a {@link Result}.
+     *
+     * @return
+     */
+    public Result runTest(String folder) {
+        File[] spamEmails;
+        File[] hamEmails;
+
+        if (folder.equals("kallibrierung") && this.spamEmails != null) {
+            spamEmails = this.spamEmails;
+            hamEmails = this.hamEmails;
+        } else {
+            spamEmails = listDirectory("spam-" + folder);
+            hamEmails = listDirectory("ham-" + folder);
+        }
+        int totalMails = spamEmails.length + hamEmails.length;
+        int correctClassification = 0;
+        for (File email : spamEmails) {
+            boolean isSpam = classify(uniqueWordsFromEMail(email));
+            if (isSpam) correctClassification++;
+        }
+        for (File email : hamEmails) {
+            boolean isSpam = classify(uniqueWordsFromEMail(email));
+            if (!isSpam) correctClassification++;
+        }
+        double successRate = (double) correctClassification / (double) totalMails;
+
+        return new Result(spamThreshold, alpha, successRate);
+    }
 
     /**
      * Reads the learning directories and updates the {@link Analysis} db.
      */
     public void learn() {
 
-        final String hamDir  = "ham-anlern";
+        final String hamDir = "ham-anlern";
         final String spamDir = "spam-anlern";
         final Map<String, WordCategorization> map = new HashMap<>();
 
-        final File [] filesHam  = listDirectory(hamDir);
-        final File [] filesSpam = listDirectory(spamDir);
+        final File[] filesHam = listDirectory(hamDir);
+        final File[] filesSpam = listDirectory(spamDir);
 
-        indexMap(map, filesHam,  ( cat -> cat != null ? cat.incHam()  : new WordCategorization().incHam()));
-        indexMap(map, filesSpam, ( cat -> cat != null ? cat.incSpam() : new WordCategorization().incSpam()));
+        indexMap(map, filesHam, (cat -> cat != null ? cat.incHam() : new WordCategorization().incHam()));
+        indexMap(map, filesSpam, (cat -> cat != null ? cat.incSpam() : new WordCategorization().incSpam()));
 
         db = new Analysis(map, hamDir.length(), spamDir.length());
-    }
-
-    public void learnStatic() {
-        final Map<String, WordCategorization> map = new HashMap<>();
-
-        map.put("online", new WordCategorization().addToHam(3).addToSpam(8));
-        map.put("haben", new WordCategorization().addToHam(30).addToSpam(7));
-        db = new Analysis(map, 100, 100);
     }
 
     /**
      * Indexes the given map with the given files.
      *
-     * @param map         Map with all the indexed data
-     * @param files       All <code>files</code> to index.
-     * @param addFuncion  Function which determines which value is put into the map.
+     * @param map        Map with all the indexed data
+     * @param files      All <code>files</code> to index.
+     * @param addFuncion Function which determines which value is put into the map.
      */
-    private void indexMap (
+    private void indexMap(
             Map<String, WordCategorization> map,
             File[] files,
             Function<WordCategorization, WordCategorization> addFuncion) {
@@ -78,7 +165,7 @@ public class BayesSpamFilter {
 
             for (String word : uniqueWords) {
                 WordCategorization cat = map.get(word);
-                map.put( word,  addFuncion.apply(cat));
+                map.put(word, addFuncion.apply(cat));
             }
         }
     }
@@ -92,10 +179,10 @@ public class BayesSpamFilter {
     private Set<String> uniqueWordsFromEMail(File email) {
         Set<String> uniqueWords = new HashSet<>();
 
-        try(BufferedReader bufferedReader = getBufferedReader(email)) {
+        try (BufferedReader bufferedReader = getBufferedReader(email)) {
 
             String line;
-            while(( line = bufferedReader.readLine()) != null) {
+            while ((line = bufferedReader.readLine()) != null) {
 
                 String[] toIndex = line.split(" ");
                 uniqueWords.addAll(Arrays.asList(toIndex));
@@ -108,13 +195,43 @@ public class BayesSpamFilter {
     }
 
     /**
-     * List files in directory.
+     * Classifies the email as Spam or no Spam
      *
-     * @param dir Directory (relative to src/main/resources)
-     * @return <code>File[]</code>: Files contained in <code>dir</code>
+     * @param emailWords
+     * @return
      */
-    private File[] listDirectory(String dir) {
-        return  new File(getClass().getClassLoader().getResource(dir).getFile()).listFiles();
+    public boolean classify(Set<String> emailWords) {
+        double spamProbability = calcProbability(emailWords);
+        return spamProbability >= spamThreshold;
+    }
+
+    /**
+     * Calculates the probability of being a spam according to http://www.math.kit.edu/ianm4/~ritterbusch/seite/spam/de
+     * and http://www.math.kit.edu/ianm4/~ritterbusch/seite/spam/de
+     *
+     * @param words
+     * @return
+     */
+    public double calcProbability(Set<String> words) {
+        // Mathematical definitions according to wikipedia
+        // Multiplied for each word as shown in math.kit.edu
+        double dividend = sProbability;     // Pr(W|S) * Pr(S)
+        double divisor1 = 0;                // Pr(W|S) * Pr(S)
+        double divisor2 = hProbability;     // Pr(W|H) * Pr(H)
+        double divisor = 0;                 // Pr(W|S) * Pr(S) + Pr(W|H) * Pr(H)
+
+        for (String w : words) {
+            WordCategorization cat = db.getCategorization().get(w);
+            double spam = cat != null ? cat.getSpam() : alpha;
+            double ham = cat != null ? cat.getHam() : alpha;
+
+            dividend *= (spam == 0 ? alpha : spam / db.getNumberOfAnalyzedSpamMails());
+            divisor2 *= (ham == 0 ? alpha : ham / db.getNumberOfAnalyzedHamMails());
+        }
+        divisor1 = dividend;
+
+        divisor = divisor1 + divisor2;
+        return dividend / divisor;          //Pr(S | W)
     }
 
     /**
@@ -141,87 +258,25 @@ public class BayesSpamFilter {
         return new BufferedReader(reader);
     }
 
-    private void persistAnalysationData(Map<String, WordCategorization> db) {
-        // TODO @Marc
-    }
-
-    private void importAnalysationData(Map<String, WordCategorization> db) {
-        // TODO @Marc
-    }
-
-    public void calibrate(double alpha, double sProbability, double spamThreshold) {
-        // TODO @Mike calibrates the sProbability and hProbability to be as precise as possible
-        this.alpha = alpha;
-        this.sProbability = sProbability;
-        this.hProbability = 1-sProbability;
-        this.spamThreshold = spamThreshold;
-    }
-
     /**
-     * Classify all mails in src/main/resources/ham-test and src/main/resources/ham-test
-     * using the {@link #classify(Set)} method and return threshold, alpha
-     * as well as success rate in a {@link Result}.
+     * List files in directory.
      *
-     * @return
+     * @param dir Directory (relative to src/main/resources)
+     * @return <code>File[]</code>: Files contained in <code>dir</code>
      */
-    public Result runTest() {
-        File[] spamEmails = listDirectory("spam-test");
-        File[] hamEmails = listDirectory("ham-test");
-        int totalMails = spamEmails.length + hamEmails.length;
-        int correctClassification = 0;
-        for (File email : spamEmails) {
-            boolean isSpam = classify(uniqueWordsFromEMail(email));
-            if (isSpam) correctClassification++;
-        }
-        for (File email: hamEmails) {
-            boolean isSpam = classify(uniqueWordsFromEMail(email));
-            if (!isSpam) correctClassification++;
-        }
-        double successRate = (double) correctClassification / (double) totalMails;
-
-        return new Result(spamThreshold, alpha, successRate);
+    private File[] listDirectory(String dir) {
+        return new File(getClass().getClassLoader().getResource(dir).getFile()).listFiles();
     }
 
     /**
-     * Classifies the email as Spam or no Spam
-     * @param emailWords
-     * @return
+     * Method used to test the example on http://www.math.kit.edu/ianm4/~ritterbusch/seite/spam/de
      */
-    public boolean classify(Set<String> emailWords) {
-        double spamProbability = calcProbability(emailWords);
-        return spamProbability >= spamThreshold;
-    }
+    public void learnStatic() {
+        final Map<String, WordCategorization> map = new HashMap<>();
 
-    /**
-     * Calculates the probability of being a spam according to http://www.math.kit.edu/ianm4/~ritterbusch/seite/spam/de
-     * and http://www.math.kit.edu/ianm4/~ritterbusch/seite/spam/de
-     * @param words
-     * @return
-     */
-    public double calcProbability(Set<String> words){
-                                            // Mathematical definitions according to wikipedia
-                                            // Multiplied for each word as shown in math.kit.edu
-        double dividend = sProbability;     // Pr(W|S) * Pr(S)
-        double divisor1 = 0;                // Pr(W|S) * Pr(S)
-        double divisor2 = hProbability;     // Pr(W|H) * Pr(H)
-        double divisor = 0;                 // Pr(W|S) * Pr(S) + Pr(W|H) * Pr(H)
-
-        for(String w : words){
-            WordCategorization cat = db.getCategorization().get(w);
-            double spam = cat != null ? cat.getSpam() : alpha;
-            double ham  = cat != null ? cat.getHam()  : alpha;
-
-            dividend *= ( spam == 0 ? alpha : spam / db.getNumberOfAnalyzedSpamMails());
-            divisor2 *= ( ham  == 0 ? alpha : ham  / db.getNumberOfAnalyzedHamMails());
-        }
-        divisor1 = dividend;
-
-        divisor = divisor1 + divisor2;
-        return dividend / divisor;          //Pr(S | W)
-    }
-
-    private Stream<String> readFromClasspath(String realativePath) {
-        return null;
+        map.put("online", new WordCategorization().addToHam(3).addToSpam(8));
+        map.put("haben", new WordCategorization().addToHam(30).addToSpam(7));
+        db = new Analysis(map, 100, 100);
     }
 
 }

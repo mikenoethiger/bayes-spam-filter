@@ -4,37 +4,19 @@ import java.util.Set;
 
 public class Main {
 
+
     public static void main(String[] args) {
         BayesSpamFilter bayesSpamFilter = new BayesSpamFilter();
 
-        // Static Run
-        bayesSpamFilter.learnStatic();
-        bayesSpamFilter.calibrate(0.0001, 0.8, 0.95);
-        Set<String> words = new HashSet<>();
-        words.add("online");
-        words.add("haben");
-        double p = bayesSpamFilter.calcProbability(words);
-        System.out.println("STATIC RUN");
-        System.out.println("probability=" + p);
+        // Run calibration
+        bayesSpamFilter.calibrate(0.0051, 0.96, 0.01);
 
-        // First Run
-        bayesSpamFilter.learn();
-        Result result = bayesSpamFilter.runTest();
-        System.out.println("1. RUN");
-        System.out.println(result);
+        // Before uncomment the following line, read the description of the method
+        // bayesSpamFilter.autoCalibrate();
 
-        // Second Run
-        bayesSpamFilter.calibrate(0, 0.6, 0.8);
         bayesSpamFilter.learn();
-        System.out.println("2. RUN");
-        result = bayesSpamFilter.runTest();
-        System.out.println(result);
-
-        // Third Run
-        bayesSpamFilter.calibrate(1, 0.1, 0.1);
-        bayesSpamFilter.learn();
-        System.out.println("3. RUN");
-        result = bayesSpamFilter.runTest();
+        Result result = bayesSpamFilter.runTest("test");
+        System.out.println("Resultate");
         System.out.println(result);
     }
 }
