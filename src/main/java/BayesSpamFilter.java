@@ -33,6 +33,9 @@ public class BayesSpamFilter {
      */
     private Analysis db;
 
+    private File[] spamEmails = null;
+    private File[] hamEmails = null;
+
     /**
      * Reads the learning directories and updates the {@link Analysis} db.
      */
@@ -51,6 +54,9 @@ public class BayesSpamFilter {
         db = new Analysis(map, hamDir.length(), spamDir.length());
     }
 
+    /**
+     * Method used to test the example on http://www.math.kit.edu/ianm4/~ritterbusch/seite/spam/de
+     */
     public void learnStatic() {
         final Map<String, WordCategorization> map = new HashMap<>();
 
@@ -141,16 +147,54 @@ public class BayesSpamFilter {
         return new BufferedReader(reader);
     }
 
-    private void persistAnalysationData(Map<String, WordCategorization> db) {
-        // TODO @Marc
+    /**
+     * Automatic Calibrates with the best alpha, sProbability and spamThreshold.
+     * Calculated by trying values on the ham-/spam-kallibrierung.
+     * This method is not time optimised and should only be use for retrieving the parameter.
+     * This method needs around 15min to get results.
+     */
+    public void autoCalibrate(){
+        double bestAlpha = 0;
+        double bestsProbability = 0;
+        double bestSpamThreshold = 0;
+        double bestResult = 0;
+        learn();
+        for(double a = 0.0001; a < 0.01; a += 0.005 ){
+            calibrate(a, 0, 0);
+//          do foreach to change alpha on all instead of learn new
+            final double aF = a;
+            db.getCategorization().values().stream()
+                    .filter(wordCategorization -> wordCategorization.getHam() < 1)
+                    .forEach(wordCategorization -> wordCategorization.addToHam((-1 * wordCategorization.getHam()) + aF));
+            db.getCategorization().values().stream()
+                    .filter(wordCategorization -> wordCategorization.getSpam() < 1)
+                    .forEach(wordCategorization -> wordCategorization.addToSpam((-1 * wordCategorization.getSpam()) + aF));
+
+            for(double sProb = 0.01; sProb < 1; sProb +=  0.01){
+                for(double sThre = 0.01; sThre < 1; sThre += 0.05){
+                    calibrate(a, sProb, sThre);
+                    //run on kallibrierung
+                    Result res = runTest("kallibrierung");
+                    if(res.getSuccessRate() > bestResult){
+                        bestAlpha = a;
+                        bestsProbability = sProb;
+                        bestSpamThreshold = sThre;
+                        bestResult = res.getSuccessRate();
+                    }
+                }
+            }
+        }
+        System.out.println("Best Calibration: ");
+        System.out.println("Alpha: " + bestAlpha);
+        System.out.println("sProbability: " + bestsProbability);
+        System.out.println("Spam Threshold: " + bestSpamThreshold);
+        System.out.println("Best Result: " + bestResult);
+        calibrate(bestAlpha, bestsProbability, bestSpamThreshold);
+
     }
 
-    private void importAnalysationData(Map<String, WordCategorization> db) {
-        // TODO @Marc
-    }
 
     public void calibrate(double alpha, double sProbability, double spamThreshold) {
-        // TODO @Mike calibrates the sProbability and hProbability to be as precise as possible
         this.alpha = alpha;
         this.sProbability = sProbability;
         this.hProbability = 1-sProbability;
@@ -164,9 +208,18 @@ public class BayesSpamFilter {
      *
      * @return
      */
-    public Result runTest() {
-        File[] spamEmails = listDirectory("spam-test");
-        File[] hamEmails = listDirectory("ham-test");
+    public Result runTest(String folder) {
+        File[] spamEmails;
+        File[] hamEmails;
+
+        if(folder.equals("kallibrierung") && this.spamEmails != null){
+            spamEmails = this.spamEmails;
+            hamEmails = this.hamEmails;
+
+        }else {
+            spamEmails = listDirectory("spam-" + folder);
+            hamEmails = listDirectory("ham-" + folder);
+        }
         int totalMails = spamEmails.length + hamEmails.length;
         int correctClassification = 0;
         for (File email : spamEmails) {

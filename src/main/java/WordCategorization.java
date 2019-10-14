@@ -4,7 +4,6 @@ public class WordCategorization {
     private double ham;
 
     public WordCategorization() {
-        // TODD specify meaningful default values (maybe change to double)
         this.spam = 0;
         this.ham = 0;
     }
