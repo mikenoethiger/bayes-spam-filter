@@ -106,6 +106,8 @@ public class BayesSpamFilter {
         File[] spamEmails;
         File[] hamEmails;
 
+
+        int foundSpam = 0, foundHam = 0;
         if (folder.equals("kallibrierung") && this.spamEmails != null) {
             spamEmails = this.spamEmails;
             hamEmails = this.hamEmails;
@@ -118,12 +120,17 @@ public class BayesSpamFilter {
         for (File email : spamEmails) {
             boolean isSpam = classify(uniqueWordsFromEMail(email));
             if (isSpam) correctClassification++;
+            if (isSpam) foundSpam++;
         }
         for (File email : hamEmails) {
             boolean isSpam = classify(uniqueWordsFromEMail(email));
             if (!isSpam) correctClassification++;
+            if (!isSpam) foundHam++;
         }
         double successRate = (double) correctClassification / (double) totalMails;
+
+        System.out.println("Found Spam: " + foundSpam + " of " + spamEmails.length);
+        System.out.println("Found Ham: " + foundHam + " of " + hamEmails.length);
 
         return new Result(spamThreshold, alpha, successRate);
     }
@@ -143,7 +150,7 @@ public class BayesSpamFilter {
         indexMap(map, filesHam, (cat -> cat != null ? cat.incHam() : new WordCategorization().incHam()));
         indexMap(map, filesSpam, (cat -> cat != null ? cat.incSpam() : new WordCategorization().incSpam()));
 
-        db = new Analysis(map, hamDir.length(), spamDir.length());
+        db = new Analysis(map, filesHam.length, filesSpam.length);
     }
 
     /**
@@ -214,24 +221,37 @@ public class BayesSpamFilter {
      */
     public double calcProbability(Set<String> words) {
         // Mathematical definitions according to wikipedia
-        // Multiplied for each word as shown in math.kit.edu
-        double dividend = sProbability;     // Pr(W|S) * Pr(S)
-        double divisor1 = 0;                // Pr(W|S) * Pr(S)
-        double divisor2 = hProbability;     // Pr(W|H) * Pr(H)
-        double divisor = 0;                 // Pr(W|S) * Pr(S) + Pr(W|H) * Pr(H)
+        // https://en.wikipedia.org/wiki/Naive_Bayes_spam_filtering
+        // --> Other expression of the formula for combining individual probabilities
+
+        double numberSpam = db.getNumberOfAnalyzedSpamMails();
+        double numberHam  = db.getNumberOfAnalyzedHamMails();
+
+        double eta = 0;
+        double spamWordPropability = 0.0d;
+
+        double spamWordPercentage = alpha;
+        double hamWordPercentage  = alpha;
+        WordCategorization wordCategory;
 
         for (String w : words) {
-            WordCategorization cat = db.getCategorization().get(w);
-            double spam = cat != null ? cat.getSpam() : alpha;
-            double ham = cat != null ? cat.getHam() : alpha;
+            wordCategory = db.getCategorization().get(w);
+            spamWordPercentage         = alpha;
+            hamWordPercentage          = alpha;
 
-            dividend *= (spam == 0 ? alpha : spam / db.getNumberOfAnalyzedSpamMails());
-            divisor2 *= (ham == 0 ? alpha : ham / db.getNumberOfAnalyzedHamMails());
+            if (wordCategory != null) {
+                spamWordPercentage = wordCategory.getSpam() != 0 ? wordCategory.getSpam() / numberSpam : alpha;
+                hamWordPercentage  = wordCategory.getHam()  != 0 ? wordCategory.getHam()  / numberHam : alpha;
+            }
+
+            spamWordPropability =
+              ( spamWordPercentage * sProbability )
+            / ( spamWordPercentage * sProbability + hamWordPercentage * hProbability );
+
+            eta += Math.log(1 - spamWordPropability) - Math.log(spamWordPropability);
         }
-        divisor1 = dividend;
 
-        divisor = divisor1 + divisor2;
-        return dividend / divisor;          //Pr(S | W)
+        return 1 / ( 1 + Math.pow(Math.E, eta ));
     }
 
     /**
