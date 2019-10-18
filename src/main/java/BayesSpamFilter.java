@@ -215,8 +215,7 @@ public class BayesSpamFilter {
     }
 
     /**
-     * Calculates the probability of being a spam according to http://www.math.kit.edu/ianm4/~ritterbusch/seite/spam/de
-     * and http://www.math.kit.edu/ianm4/~ritterbusch/seite/spam/de
+     * Calculates the probability of being a spam according to https://en.wikipedia.org/wiki/Naive_Bayes_spam_filtering
      *
      * @param words
      * @return
