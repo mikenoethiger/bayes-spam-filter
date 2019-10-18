@@ -6,7 +6,8 @@ public class Main {
         BayesSpamFilter bayesSpamFilter = new BayesSpamFilter();
 
         // Run calibration
-        bayesSpamFilter.calibrate(0.0051, 0.96, 0.01);
+        bayesSpamFilter.calibrate(1.0E-4, 0.8600000000000005, 0.26);
+
 
         // Before uncomment the following line, read the description of the method
         // bayesSpamFilter.autoCalibrate();

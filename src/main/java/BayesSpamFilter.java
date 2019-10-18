@@ -119,20 +119,22 @@ public class BayesSpamFilter {
         int correctClassification = 0;
         for (File email : spamEmails) {
             boolean isSpam = classify(uniqueWordsFromEMail(email));
-            if (isSpam) correctClassification++;
-            if (isSpam) foundSpam++;
+            if (isSpam) {
+                correctClassification++;
+                foundSpam++;
+            }
         }
+
         for (File email : hamEmails) {
             boolean isSpam = classify(uniqueWordsFromEMail(email));
-            if (!isSpam) correctClassification++;
-            if (!isSpam) foundHam++;
+
+            if (!isSpam) {
+                correctClassification++;
+                foundHam++;
+            }
         }
         double successRate = (double) correctClassification / (double) totalMails;
-
-        System.out.println("Found Spam: " + foundSpam + " of " + spamEmails.length);
-        System.out.println("Found Ham: " + foundHam + " of " + hamEmails.length);
-
-        return new Result(spamThreshold, alpha, successRate);
+        return new Result(spamThreshold, alpha, successRate, foundSpam, spamEmails.length, foundHam, hamEmails.length);
     }
 
     /**
